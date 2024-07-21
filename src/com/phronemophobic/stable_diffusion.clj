@@ -91,16 +91,6 @@
   (with-open [os (clojure.java.io/output-stream f)]
     (ImageIO/write ^BufferedImage bufimg "png" os)))
 
-(comment
-  (raw/sd_set_log_callback
-   (fn [level msg user]
-     (print (.getString (.getPointer msg) 0))
-     (flush)
-     nil)
-   nil)
-
-  ,)
-
 (defn ^:private ->img [ctx prompt path]
   (let [img (txt2img ctx {:prompt prompt
                           :sample-steps 4
@@ -117,6 +107,12 @@
 
 
 (comment
+  (raw/sd_set_log_callback
+   (fn [level msg user]
+     (print (.getString (.getPointer msg) 0))
+     (flush)
+     nil)
+   nil)
   ;; typedef void (*sd_progress_cb_t)(int step, int steps, float time, void* data);
   (raw/sd_set_progress_callback (fn [step steps t _]
                                   (println "progress:" step "/" steps)) nil)
