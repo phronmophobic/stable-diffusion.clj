@@ -2,7 +2,9 @@
   (:require [com.phronemophobic.stable-diffusion.impl.raw :as raw]
             [clojure.java.io :as io])
   (:import
+   com.sun.jna.Pointer
    javax.imageio.ImageIO
+   java.lang.ref.Cleaner
    java.awt.image.BufferedImage)
   (:gen-class))
 
@@ -11,6 +13,16 @@
     1
     0))
 
+
+(defonce cleaner (delay (Cleaner/create)))
+
+(defn add-cleaner [o]
+  (let [ptr (Pointer/nativeValue o)]
+    (.register ^Cleaner @cleaner
+               o
+               (fn []
+                 (raw/free_sd_ctx ptr)))
+    o))
 
 ;; If you wish to generate images multiple times, simply set "free_params_immediately" to false.
 (defn new-sd-ctx [{:keys [model-path
@@ -30,26 +42,27 @@
                           clip-on-cpu
                           control-net-cpu
                           vae-on-cpu]}]
-  (raw/new_sd_ctx model-path
-                  
-                  (or vae-path "")
-                  (or taesd-path "")
-                  (or controlnet-path "")
-                  (or lora-model-dir "")
-                  (or embeddings-path "")
-                  (or stacked-id-embeddings-path "")
-                  (->bool (if (nil? vae-decode-only)
-                            true
-                            vae-decode-only))
-                  (->bool vae-tiling)
-                  (->bool free-params-immediately)
-                  (or n-threads (raw/get_num_physical_cores))
-                  (or wtype raw/SD_TYPE_COUNT)
-                  (or rng-type raw/CUDA_RNG)
-                  (or schedule raw/DEFAULT)
-                  (->bool clip-on-cpu)
-                  (->bool control-net-cpu)
-                  (->bool vae-on-cpu)))
+  (add-cleaner
+   (raw/new_sd_ctx model-path
+
+                   (or vae-path "")
+                   (or taesd-path "")
+                   (or controlnet-path "")
+                   (or lora-model-dir "")
+                   (or embeddings-path "")
+                   (or stacked-id-embeddings-path "")
+                   (->bool (if (nil? vae-decode-only)
+                             true
+                             vae-decode-only))
+                   (->bool vae-tiling)
+                   (->bool free-params-immediately)
+                   (or n-threads (raw/get_num_physical_cores))
+                   (or wtype raw/SD_TYPE_COUNT)
+                   (or rng-type raw/CUDA_RNG)
+                   (or schedule raw/DEFAULT)
+                   (->bool clip-on-cpu)
+                   (->bool control-net-cpu)
+                   (->bool vae-on-cpu))))
 
 (defn txt2img [ctx {:keys [prompt
                            negative-prompt
@@ -84,8 +97,12 @@
                      (or control-strength 0.9)
                      (or style-strength 20.0)
                      (->bool normalize-input)
-                     (or input-id-images-path ""))]
-    (raw/sb-image->buffered-image sb-image)))
+                     (or input-id-images-path ""))
+        bufimg (raw/sb-image->buffered-image sb-image)]
+    (raw/free (-> sb-image
+                  (.readField "data")
+                  (.getPointer)))
+    bufimg))
 
 (defn save-png [bufimg f]
   (with-open [os (clojure.java.io/output-stream f)]

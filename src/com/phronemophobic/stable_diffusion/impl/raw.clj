@@ -92,3 +92,12 @@
 (gen/def-api-lazy lib api)
 
 
+
+(def free*
+  (delay
+    (.getFunction (com.sun.jna.NativeLibrary/getProcess)
+                  "free")))
+(defn free [ptr]
+  (.invoke @free* Void/TYPE (to-array [ptr])))
+
+
