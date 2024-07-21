@@ -4,8 +4,10 @@
         com.phronemophobic/clong {:mvn/version "1.4.1"}}
  :aliases
  {:project
-  {:extra-deps {org.bytedeco/llvm-platform {:mvn/version "16.0.4-1.5.9"}}
-   :jvm-opts [
+  {:extra-deps {org.bytedeco/llvm-platform {:mvn/version "16.0.4-1.5.9"}
+                com.phronemophobic.cljonda/stable-diffusion-cpp-darwin-aarch64 {:mvn/version "9c51d8787f78ef1bd0ead1e8f48b766d7ee7484d"}
+                }
+   #_#_:jvm-opts [
               
               "-Djna.library.path=../stable-diffusion.cpp/build/bin/"
               ]}}}
